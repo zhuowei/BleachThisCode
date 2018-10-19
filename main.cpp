@@ -52,6 +52,13 @@ void TokenMapper::writeHeader(std::ofstream& output) {
 	}
 }
 
+bool nextNonWhitespaceIsLeftParen(lex_iterator_type iter) {
+	for (; ; iter++) {
+		auto const& token = *iter;
+		if (IS_CATEGORY(token, WhiteSpaceTokenType)) continue;
+		return token_id(token) == T_LEFTPAREN;
+}
+
 int main(int argc, char** argv) {
 	if (argc < 3) {
 		std::cerr << "usage: ./bleachthiscode <input.c> <output.c>" << std::endl;
@@ -79,8 +86,10 @@ int main(int argc, char** argv) {
 				// if the last emitted is not a space, manually emit a separator
 				output << " ";
 			}
-			// hack: leftparens belong with the previous identifier. function-like macros need this.
-			if (IS_CATEGORY(token, IdentifierTokenType) && token_id(token) != T_EOF && token_id(*iter) == T_LEFTPAREN) {
+			// method calls need to be defined together, because method-like preprocessor macros only work with literal ()s.
+			if (IS_CATEGORY(token, IdentifierTokenType) && token_id(token) != T_EOF && nextNonWhitespaceIsLeftParen(iter)) {
+				std::cout << "Method call!\n";
+				/*
 				if (!lastTokenIsDefine) {
 					output << mapper.mapToken((token.get_value() + "(").c_str());
 				} else {
@@ -89,7 +98,9 @@ int main(int argc, char** argv) {
 				}
 				lastEmittedSpace = false;
 				lastTokenIsDefine = false;
+				iter++;
 				continue;
+				*/
 			}
 			if (!lastTokenIsDefine) {
 				output << mapper.mapToken(token.get_value().c_str());
