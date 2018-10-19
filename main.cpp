@@ -30,7 +30,19 @@ std::string TokenMapper::mapToken(std::string const& inputToken) {
 }
 
 std::string TokenMapper::translateToken(std::string const& inputToken) {
-	return "A" + std::to_string(curid++);
+	static const std::string digits[] = {"\u200b", "\u200c", "\u200d", "\ufeff"};
+	//static const std::string digits[] = {"a", "b", "c", "d"};
+	int rem = curid++;
+	if (rem == 0) {
+		return digits[0];
+	}
+	std::string outstr = "";
+	while (rem != 0) {
+		outstr = digits[rem & 0x3] + outstr;
+		rem >>= 2;
+	}
+
+	return outstr;
 }
 
 void TokenMapper::writeHeader(std::ofstream& output) {
