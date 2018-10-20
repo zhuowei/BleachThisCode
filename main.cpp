@@ -65,7 +65,7 @@ bool nextNonWhitespaceIsLeftParen(lex_iterator_type iter) {
 }
 static void translate(lex_iterator_type& iter, std::stringstream& output, TokenMapper& mapper, bool functionCallMode);
 
-int main(int argc, char** argv) {
+static int main_impl(int argc, char** argv) {
 	if (argc < 3) {
 		std::cerr << "usage: ./bleachthiscode <input.c> <output.c>" << std::endl;
 		return 1;
@@ -80,7 +80,18 @@ int main(int argc, char** argv) {
 	translate(iter, output, mapper, false);
 	mapper.writeHeader(fileoutput);
 	fileoutput << output.str();
+	return 0;
 }
+
+int main(int argc, char** argv) {
+	try {
+		return main_impl(argc, argv);
+	} catch (...) {
+		std::cerr << "Error " << argv[1] << std::endl;
+		return 1;
+	}
+}
+
 // functionCallMode: end after matching one pair of parens, pass through parens and commas.
 static void translate(lex_iterator_type& iter, std::stringstream& output, TokenMapper& mapper, bool functionCallMode) {
 	bool lastEmittedSpace = false;
@@ -106,7 +117,11 @@ static void translate(lex_iterator_type& iter, std::stringstream& output, TokenM
 			if (IS_CATEGORY(token, IdentifierTokenType) && token_id(token) != T_EOF && nextNonWhitespaceIsLeftParen(iter)) {
 				std::stringstream newoutput;
 				translate(iter, newoutput, mapper, true);
-				output << " " << mapper.mapToken(token.get_value().c_str() + newoutput.str());
+				if (!lastTokenIsDefine) {
+					output << " " << mapper.mapToken(token.get_value().c_str() + newoutput.str());
+				} else {
+					output << " " << token.get_value() << newoutput.str();
+				}
 				lastEmittedSpace = false;
 				lastTokenIsDefine = false;
 				continue;
