@@ -75,7 +75,7 @@ static int main_impl(int argc, char** argv) {
 		std::istreambuf_iterator<char>()};
 	std::ofstream fileoutput{argv[2], std::ios_base::out};
 	std::stringstream output;
-	lex_iterator_type iter(instr.begin(), instr.end(), {}, boost::wave::language_support::support_cpp);
+	lex_iterator_type iter(instr.begin(), instr.end(), {}, language_support::support_cpp11);
 	TokenMapper mapper;
 	translate(iter, output, mapper, false);
 	mapper.writeHeader(fileoutput);
