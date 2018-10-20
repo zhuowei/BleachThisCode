@@ -30,9 +30,10 @@ std::string TokenMapper::mapToken(std::string const& inputToken) {
 }
 
 std::string TokenMapper::translateToken(std::string const& inputToken) {
-	//static const std::string digits[] = {"\u200b", "\u200c", "\u200d", "\ufeff"};
-	static const std::string digits[] = {"a", "b", "c", "d"};
-	static const std::string prefix = "bleached_";
+	static const std::string digits[] = {"\u200b", "\u200c", "\u200d", "\ufeff"};
+	static const std::string prefix = "";
+	//static const std::string digits[] = {"a", "b", "c", "d"};
+	//static const std::string prefix = "bleached_";
 	int rem = curid++;
 	if (rem == 0) {
 		return prefix + digits[0];
