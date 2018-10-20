@@ -57,7 +57,9 @@ bool nextNonWhitespaceIsLeftParen(lex_iterator_type iter) {
 		auto const& token = *iter;
 		if (IS_CATEGORY(token, WhiteSpaceTokenType)) continue;
 		return token_id(token) == T_LEFTPAREN;
+	}
 }
+static void translate(lex_iterator_type& iter, std::stringstream& output, TokenMapper& mapper, bool functionCallMode);
 
 int main(int argc, char** argv) {
 	if (argc < 3) {
@@ -70,15 +72,22 @@ int main(int argc, char** argv) {
 	std::ofstream fileoutput{argv[2], std::ios_base::out};
 	std::stringstream output;
 	lex_iterator_type iter(instr.begin(), instr.end(), {}, boost::wave::language_support::support_cpp);
-	lex_iterator_type iter_end = lex_iterator_type();
 	std::cout << "ok\n";
+	TokenMapper mapper;
+	translate(iter, output, mapper, false);
+	mapper.writeHeader(fileoutput);
+	fileoutput << output.str();
+}
+// functionCallMode: end after matching one pair of parens, pass through parens and commas.
+static void translate(lex_iterator_type& iter, std::stringstream& output, TokenMapper& mapper, bool functionCallMode) {
 	bool lastEmittedSpace = false;
 	bool lastTokenIsDefine = true;
-	TokenMapper mapper;
-	for (; iter != iter_end; ) {
+	int parenCount = 0;
+	for (;;) {
 		lex_token token = *iter;
 		iter++;
 		std::cout << token_id(token) << " " << boost::wave::get_token_name(token_id(token)) << " " << token.get_value() << std::endl;
+		if (token_id(token) == T_EOF) break;
 		if (IS_CATEGORY(token, KeywordTokenType) || IS_CATEGORY(token, StringLiteralTokenType) ||
 			IS_CATEGORY(token, OperatorTokenType) || IS_CATEGORY(token, IdentifierTokenType) || 
 			IS_CATEGORY(token, IntegerLiteralTokenType)) {
@@ -86,23 +95,17 @@ int main(int argc, char** argv) {
 				// if the last emitted is not a space, manually emit a separator
 				output << " ";
 			}
-			// method calls need to be defined together, because method-like preprocessor macros only work with literal ()s.
 			if (IS_CATEGORY(token, IdentifierTokenType) && token_id(token) != T_EOF && nextNonWhitespaceIsLeftParen(iter)) {
-				std::cout << "Method call!\n";
-				/*
-				if (!lastTokenIsDefine) {
-					output << mapper.mapToken((token.get_value() + "(").c_str());
-				} else {
-					// first arg of define is passed through unmodified.
-					output << token.get_value() << "(";
-				}
+				std::stringstream newoutput;
+				translate(iter, newoutput, mapper, true);
+				output << " " << mapper.mapToken(token.get_value().c_str() + newoutput.str());
 				lastEmittedSpace = false;
 				lastTokenIsDefine = false;
-				iter++;
 				continue;
-				*/
 			}
-			if (!lastTokenIsDefine) {
+			// method calls need to be defined together, because method-like preprocessor macros only work with literal ()s.
+			bool passThrough = functionCallMode && (token_id(token) == T_LEFTPAREN || token_id(token) == T_RIGHTPAREN || token_id(token) == T_COMMA);
+			if (!(lastTokenIsDefine || passThrough)) {
 				output << mapper.mapToken(token.get_value().c_str());
 			} else {
 				// first arg of define is passed through unmodified.
@@ -110,6 +113,15 @@ int main(int argc, char** argv) {
 			}
 			lastEmittedSpace = false;
 			lastTokenIsDefine = false;
+			if (functionCallMode) {
+				if (token_id(token) == T_LEFTPAREN) {
+					parenCount++;
+				}
+				if (token_id(token) == T_RIGHTPAREN) {
+					parenCount--;
+					if (parenCount == 0) return;
+				}
+			}
 		} else if (token_id(token) == T_CCOMMENT || token_id(token) == T_CPPCOMMENT) {
 			// remove comments; we don't change the last emitted status
 		} else if (token_id(token) == T_NEWLINE) {
@@ -131,6 +143,4 @@ int main(int argc, char** argv) {
 			}
 		}
 	}
-	mapper.writeHeader(fileoutput);
-	fileoutput << output.str();
 }
