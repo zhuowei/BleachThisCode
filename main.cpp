@@ -146,8 +146,12 @@ static void translate(lex_iterator_type& iter, std::stringstream& output, TokenM
 		} else if (token_id(token) == T_CCOMMENT || token_id(token) == T_CPPCOMMENT) {
 			// remove comments; we don't change the last emitted status
 		} else if (token_id(token) == T_NEWLINE) {
-			// newlines are printed directly
-			output << token.get_value();
+			// newlines are printed directly, unless we're processing function arguments
+			if (!functionCallMode) {
+				output << token.get_value();
+			} else {
+				output << " ";
+			}
 			lastEmittedSpace = true;
 		} else if (IS_CATEGORY(token, WhiteSpaceTokenType)) {
 			// other whitespace is turned into one space
